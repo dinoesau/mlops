@@ -1,42 +1,42 @@
 services:
   ## Mocked RAG application (embedding + vector search mocked)
+  ## Talks to vLLM running on the host (no vllm-server container).
   rag-app:
     build:
-      context: rag-app  # Builds the image using Dockerfile from the rag-app directory
+      context: ./rag_app  # Builds the image using Dockerfile from the rag_app directory
     container_name: rag-app
     ports:
       - "8002:8002"  # FastAPI main API endpoint
       - "8001:8001"  # Prometheus metrics endpoint
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=grpc://jaeger:4317  # Send traces to Jaeger
+      - VLLM_BASE_URL=http://gateway:8003  # All LLM traffic via token-aware gateway
+      - RAG_LLM_TOKEN=my-secret-token-rag  # Identified as client-rag in gateway metrics
+      - MODEL_NAME=Qwen/Qwen2.5-0.5B-Instruct  # Must match the model served by local `vllm serve`
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Resolve host gateway on Linux/Mac/Windows
     depends_on:
       - jaeger
-      - prometheus
+      - gateway
 
-  ## vLLM server for LLM inference
-  vllm-server:
-    build: vllm-server  # Builds the image from the vllm-server directory
-    container_name: vllm-server
+  ## Token-aware gateway in front of host-run vLLM.
+  ## Required because vLLM never exposes Bearer tokens in metrics/traces.
+  gateway:
+    build:
+      context: ./gateway
+    container_name: gateway
     ports:
-      - "8000:8000"  # vLLM inference API port
+      - "8003:8003"  # Gateway OpenAI-compatible API
+      - "8004:8004"  # Gateway Prometheus metrics
     environment:
-      - MODEL_NAME=facebook/opt-125m  # Name of the model to serve
-      - OTEL_SERVICE_NAME=vllm-server  # Service name used in tracing
-      - NVIDIA_VISIBLE_DEVICES=all  # Make all GPUs visible to the container
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility  # Required for GPU compute workloads
-      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=grpc://jaeger:4317  # Send traces to Jaeger
-      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true  # Allow insecure (non-TLS) trace export
-      - VLLM_LOGGING_LEVEL=DEBUG  # Set logging level
-    command: vllm serve facebook/opt-125m --otlp-traces-endpoint=grpc://jaeger:4317  # Start vLLM server
+      - OTEL_EXPORTER_OTLP_ENDPOINT=grpc://jaeger:4317
+      - VLLM_BASE_URL=http://host.docker.internal:8000
+      - TOKEN_MAP=my-secret-token-123:client-a,my-secret-token-456:client-b,my-secret-token-rag:client-rag
+      - STRICT_AUTH=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - jaeger
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia  # Use the NVIDIA runtime
-              count: all      # Use all available GPUs
-              capabilities: [gpu]  # Request GPU capability
 
   ## Jaeger: distributed tracing backend
   jaeger:
@@ -62,6 +62,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml  # Mount custom config
     ports:
       - "9090:9090"  # Prometheus UI and API
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Allow scraping host-run vLLM at :8000/metrics
 
   ## Grafana: metrics dashboard and visualization
   grafana:
