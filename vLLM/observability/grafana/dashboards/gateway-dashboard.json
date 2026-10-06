@@ -93,7 +93,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (rate(llm_requests_total[5m]))",
+          "expr": "sum by (project, key_name) (rate(llm_requests_total{project!=\"\",key_name!=\"\"}[5m]))",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -115,7 +115,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (rate(llm_prompt_tokens_total[5m]))",
+          "expr": "sum by (project, key_name) (rate(llm_prompt_tokens_total{project!=\"\",key_name!=\"\"}[5m]))",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -137,7 +137,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (rate(llm_completion_tokens_total[5m]))",
+          "expr": "sum by (project, key_name) (rate(llm_completion_tokens_total{project!=\"\",key_name!=\"\"}[5m]))",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -159,7 +159,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (rate(llm_prompt_tokens_total[5m]) + rate(llm_completion_tokens_total[5m]))",
+          "expr": "sum by (project, key_name) (rate(llm_prompt_tokens_total{project!=\"\",key_name!=\"\"}[5m]) + rate(llm_completion_tokens_total{project!=\"\",key_name!=\"\"}[5m]))",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -181,7 +181,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (llm_prompt_tokens_total)",
+          "expr": "sum by (project, key_name) (llm_prompt_tokens_total{project!=\"\",key_name!=\"\"})",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -203,7 +203,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (llm_completion_tokens_total)",
+          "expr": "sum by (project, key_name) (llm_completion_tokens_total{project!=\"\",key_name!=\"\"})",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -225,7 +225,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project, key_name) (llm_requests_total)",
+          "expr": "sum by (project, key_name) (llm_requests_total{project!=\"\",key_name!=\"\"})",
           "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
@@ -248,13 +248,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project,key_name,model) (rate($metric[5m]))",
+          "expr": "sum by (project,key_name,model) (rate($metric{project!=\"\",key_name!=\"\"}[5m]))",
           "legendFormat": "{{project}}/{{key_name}} -> {{model}}"
         }
       ],
       "options": {
         "renderer": "canvas",
-        "getOption": "const data = (typeof context !== 'undefined' && context.panel && context.panel.data) ? context.panel.data : { series: [] };\nconst links = [];\nconst nodes = new Set();\n(data.series || []).forEach((s) => {\n  const f = (s.fields && s.fields[1]) || {};\n  const labels = f.labels || s.labels || {};\n  const project = labels.project || 'unknown';\n  const key = labels.key_name || 'anonymous';\n  const model = labels.model || 'unknown';\n  let vals = (f.values && f.values.toArray) ? f.values.toArray() : (f.values || s.values || []);\n  if (!Array.isArray(vals)) vals = [];\n  const value = Number(vals[vals.length - 1] || 0);\n  if (!value || value <= 0) return;\n  const mid = project + '/' + key;\n  nodes.add(project); nodes.add(mid); nodes.add(model);\n  links.push({ source: project, target: mid, value: value });\n  links.push({ source: mid, target: model, value: value });\n});\nreturn {\n  tooltip: { trigger: 'item' },\n  series: [{ type: 'sankey', data: [...nodes].map((n) => ({ name: n })), links: links, emphasis: { focus: 'adjacency' } }]\n};"
+        "getOption": "const data = (typeof context !== 'undefined' && context.panel && context.panel.data) ? context.panel.data : { series: [] };\nconst links = [];\nconst nodes = new Set();\n(data.series || []).forEach((s) => {\n  const f = (s.fields && s.fields[1]) || {};\n  const labels = f.labels || s.labels || {};\n  const project = labels.project || '';\n  const key = labels.key_name || '';\n  const model = labels.model || 'unknown';\n  if (!project || !key) return;\n  let vals = (f.values && f.values.toArray) ? f.values.toArray() : (f.values || s.values || []);\n  if (!Array.isArray(vals)) vals = [];\n  const value = Math.max.apply(null, vals.map(Number).filter((v) => v > 0).concat([0]));\n  if (!value || value <= 0) return;\n  const mid = project + '/' + key;\n  nodes.add(project); nodes.add(mid); nodes.add(model);\n  links.push({ source: project, target: mid, value: value });\n  links.push({ source: mid, target: model, value: value });\n});\nreturn {\n  tooltip: { trigger: 'item' },\n  series: [{ type: 'sankey', data: [...nodes].map((n) => ({ name: n })), links: links, emphasis: { focus: 'adjacency' } }]\n};"
       }
     },
     {
@@ -275,7 +275,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (project,key_name,model) (rate($metric[5m]))",
+          "expr": "sum by (project,key_name,model) (rate($metric{project!=\"\",key_name!=\"\"}[5m]))",
           "legendFormat": "{{project}}/{{key_name}} -> {{model}}",
           "format": "table",
           "instant": true,
