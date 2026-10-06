@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -19,13 +22,55 @@
   "version": 1,
   "schemaVersion": 37,
   "style": "dark",
-  "tags": ["llm", "tokens", "gateway"],
+  "tags": [
+    "llm",
+    "tokens",
+    "gateway"
+  ],
   "timezone": "",
-  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "metric",
+        "type": "custom",
+        "label": "Metric",
+        "hide": 0,
+        "options": [
+          {
+            "text": "llm_requests_total",
+            "value": "llm_requests_total",
+            "selected": true
+          },
+          {
+            "text": "llm_prompt_tokens_total",
+            "value": "llm_prompt_tokens_total",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "llm_requests_total",
+          "value": "llm_requests_total",
+          "selected": true
+        },
+        "query": "llm_requests_total,llm_prompt_tokens_total",
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
       "panels": [],
       "title": "Per-token usage (gateway must receive traffic on :8003, never direct to vLLM :8000)",
@@ -34,98 +79,207 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "LLM Requests by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "title": "LLM Requests by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (rate(llm_requests_total[5m]))",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (rate(llm_requests_total[5m]))",
+          "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
     },
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Prompt Tokens / sec by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "title": "Prompt Tokens / sec by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (rate(llm_prompt_tokens_total[5m]))",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (rate(llm_prompt_tokens_total[5m]))",
+          "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
     },
     {
       "id": 4,
       "type": "timeseries",
-      "title": "Completion Tokens / sec by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "title": "Completion Tokens / sec by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (rate(llm_completion_tokens_total[5m]))",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (rate(llm_completion_tokens_total[5m]))",
+          "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
     },
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Total Tokens / sec by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "title": "Total Tokens / sec by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (rate(llm_prompt_tokens_total[5m]) + rate(llm_completion_tokens_total[5m]))",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (rate(llm_prompt_tokens_total[5m]) + rate(llm_completion_tokens_total[5m]))",
+          "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
     },
     {
       "id": 6,
       "type": "stat",
-      "title": "Total Prompt Tokens by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
+      "title": "Total Prompt Tokens by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 17
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (llm_prompt_tokens_total)",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (llm_prompt_tokens_total)",
+          "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
     },
     {
       "id": 7,
       "type": "stat",
-      "title": "Total Completion Tokens by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 17 },
+      "title": "Total Completion Tokens by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 17
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (llm_completion_tokens_total)",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (llm_completion_tokens_total)",
+          "legendFormat": "{{project}}/{{key_name}}"
         }
       ]
     },
     {
       "id": 8,
       "type": "stat",
-      "title": "Total Requests by client_id",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 17 },
+      "title": "Total Requests by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 17
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (client_id) (llm_requests_total)",
-          "legendFormat": "{{client_id}}"
+          "expr": "sum by (project, key_name) (llm_requests_total)",
+          "legendFormat": "{{project}}/{{key_name}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "volkovlabs-echarts-panel",
+      "title": "Flow project -> project/key_name -> model (Sankey)",
+      "description": "Live flow from llm_requests_total by project,key_name,model. Requires volkovlabs-echarts-panel plugin. If plugin is missing, use panel 10 table fallback with the same query.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 25
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (project,key_name,model) (rate($metric[5m]))",
+          "legendFormat": "{{project}}/{{key_name}} -> {{model}}"
+        }
+      ],
+      "options": {
+        "renderer": "canvas",
+        "getOption": "const data = (typeof context !== 'undefined' && context.panel && context.panel.data) ? context.panel.data : { series: [] };\nconst links = [];\nconst nodes = new Set();\n(data.series || []).forEach((s) => {\n  const f = (s.fields && s.fields[1]) || {};\n  const labels = f.labels || s.labels || {};\n  const project = labels.project || 'unknown';\n  const key = labels.key_name || 'anonymous';\n  const model = labels.model || 'unknown';\n  let vals = (f.values && f.values.toArray) ? f.values.toArray() : (f.values || s.values || []);\n  if (!Array.isArray(vals)) vals = [];\n  const value = Number(vals[vals.length - 1] || 0);\n  if (!value || value <= 0) return;\n  const mid = project + '/' + key;\n  nodes.add(project); nodes.add(mid); nodes.add(model);\n  links.push({ source: project, target: mid, value: value });\n  links.push({ source: mid, target: model, value: value });\n});\nreturn {\n  tooltip: { trigger: 'item' },\n  series: [{ type: 'sankey', data: [...nodes].map((n) => ({ name: n })), links: links, emphasis: { focus: 'adjacency' } }]\n};"
+      }
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Flow project/key/model table (fallback if ECharts missing)",
+      "description": "Same query as Sankey panel, tabular fallback when volkovlabs-echarts-panel is not installed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (project,key_name,model) (rate($metric[5m]))",
+          "legendFormat": "{{project}}/{{key_name}} -> {{model}}",
+          "format": "table",
+          "instant": true,
+          "range": false
         }
       ]
     }
