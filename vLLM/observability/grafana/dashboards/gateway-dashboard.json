@@ -1,0 +1,133 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "id": null,
+  "title": "LLM Gateway - API Token Usage",
+  "uid": "gateway-dashboard",
+  "version": 1,
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["llm", "tokens", "gateway"],
+  "timezone": "",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "panels": [],
+      "title": "Per-token usage (gateway must receive traffic on :8003, never direct to vLLM :8000)",
+      "type": "row"
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "LLM Requests by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (rate(llm_requests_total[5m]))",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Prompt Tokens / sec by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (rate(llm_prompt_tokens_total[5m]))",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Completion Tokens / sec by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (rate(llm_completion_tokens_total[5m]))",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Total Tokens / sec by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (rate(llm_prompt_tokens_total[5m]) + rate(llm_completion_tokens_total[5m]))",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Total Prompt Tokens by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (llm_prompt_tokens_total)",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Total Completion Tokens by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 17 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (llm_completion_tokens_total)",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Total Requests by client_id",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 17 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (llm_requests_total)",
+          "legendFormat": "{{client_id}}"
+        }
+      ]
+    }
+  ]
+}
