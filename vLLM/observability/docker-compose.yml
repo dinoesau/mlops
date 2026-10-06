@@ -11,7 +11,7 @@ services:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=grpc://jaeger:4317  # Send traces to Jaeger
       - VLLM_BASE_URL=http://gateway:8003  # All LLM traffic via token-aware gateway
-      - RAG_LLM_TOKEN=my-secret-token-rag  # Identified as client-rag in gateway metrics
+      - RAG_LLM_TOKEN=poc-app-rag-prod-001  # Identified as app-rag/production in gateway metrics
       - MODEL_NAME=Qwen/Qwen2.5-0.5B-Instruct  # Must match the model served by local `vllm serve`
     extra_hosts:
       - "host.docker.internal:host-gateway"  # Resolve host gateway on Linux/Mac/Windows
@@ -31,8 +31,10 @@ services:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=grpc://jaeger:4317
       - VLLM_BASE_URL=http://host.docker.internal:8000
-      - TOKEN_MAP=my-secret-token-123:client-a,my-secret-token-456:client-b,my-secret-token-rag:client-rag
       - STRICT_AUTH=true
+      # DEFAULT_KEYS in gateway.py is the source of truth (app-rag/production,
+      # app-rag/staging, app-etl/production, free/client-a, disabled).
+      # TOKEN_MAP and API_KEYS_JSON are optional overrides only.
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -74,6 +76,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin  # Default admin username
       - GF_SECURITY_ADMIN_PASSWORD=admin  # Default admin password
+      - GF_INSTALL_PLUGINS=volkovlabs-echarts-panel  # Sankey project -> key -> model
     volumes:
       - grafana-storage:/var/lib/grafana  # Persist Grafana data
       - ./grafana/dashboards:/var/lib/grafana/dashboards  # Mount custom dashboards
