@@ -2,6 +2,7 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from typing import List
+import os
 import random
 import time
 import requests
@@ -23,6 +24,10 @@ from prometheus_client import start_http_server
 
 # --- OpenTelemetry Configuration ---
 SERVICE = "rag-fastapi-service"
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://gateway:8003").rstrip("/")
+RAG_LLM_TOKEN = os.getenv("RAG_LLM_TOKEN", "my-secret-token-rag")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-0.5B-Instruct")
+OTEL_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "grpc://jaeger:4317")
 
 # Tracing setup
 resource = Resource(attributes={SERVICE_NAME: SERVICE})
@@ -31,7 +36,7 @@ trace.set_tracer_provider(trace_provider)
 
 # Add OTLP exporter to Jaeger via gRPC (default OTLP/gRPC port: 4317)
 otlp_exporter = OTLPSpanExporter(
-    endpoint="grpc://jaeger:4317",  # internal Docker hostname or "localhost" outside
+    endpoint=OTEL_OTLP_ENDPOINT,  # internal Docker hostname or "localhost" outside
     insecure=True
 )
 
@@ -83,10 +88,12 @@ def generate_answer(context: List[str], query: str) -> str:
     prompt = f"{' '.join(context)}\nQ: {query}\nA:"
 
     headers = {"Content-Type": "application/json"}
+    if RAG_LLM_TOKEN:
+        headers["Authorization"] = f"Bearer {RAG_LLM_TOKEN}"
     TraceContextTextMapPropagator().inject(headers)
 
     payload = {
-        "model": "facebook/opt-125m",
+        "model": MODEL_NAME,
         "prompt": prompt,
         "max_tokens": 50,
         "temperature": 0.7,
@@ -95,7 +102,7 @@ def generate_answer(context: List[str], query: str) -> str:
     }
 
     try:
-        response = requests.post("http://vllm-server:8000/v1/completions", headers=headers, json=payload)
+        response = requests.post(f"{VLLM_BASE_URL}/v1/completions", headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
         return result["choices"][0]["text"].strip()
