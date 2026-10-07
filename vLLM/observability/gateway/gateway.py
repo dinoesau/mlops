@@ -45,12 +45,17 @@ OTEL_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "grpc://jaeger:431
 TOKEN_MAP_RAW = os.getenv("TOKEN_MAP", "")
 API_KEYS_JSON_RAW = os.getenv("API_KEYS_JSON", "")
 STRICT_AUTH = os.getenv("STRICT_AUTH", "true").lower() in ("1", "true", "yes")
+ALLOW_UNKNOWN_KEYS = os.getenv("ALLOW_UNKNOWN_KEYS", "false").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 METRICS_PORT = int(os.getenv("METRICS_PORT", "8004"))
 TIMEOUT_S = int(os.getenv("VLLM_TIMEOUT_S", "120"))
 
 FREE_PROJECT = "free"
-UNKNOWN_PROJECT = "unknown"
-ANONYMOUS_NAME = "anonymous"
+UNKNOWN_PROJECT = "anomaly"
+ANONYMOUS_NAME = "anomaly"
 ANONYMOUS_CLIENT = "anonymous"
 AUTH_SCHEME = "bearer "
 
@@ -197,7 +202,10 @@ def token_hash_prefix(token: str) -> str:
 
 # Hardcoded example keys (placeholders only, no real secrets).
 # Includes app-rag/production, app-rag/staging, app-etl/production,
-# one free key without project, and one disabled key.
+# one free key without project, one disabled key,
+# and plan-investigacion keys (mi-fiscalia-*).
+# Unknown tokens are never accepted; blocked attempts are exported
+# under project/key_name "anomaly" for visibility.
 DEFAULT_KEYS: list[dict[str, object]] = [
     {"token": "poc-app-rag-prod-001", "project": "app-rag", "name": "production"},
     {"token": "poc-app-rag-stag-002", "project": "app-rag", "name": "staging"},
@@ -208,6 +216,31 @@ DEFAULT_KEYS: list[dict[str, object]] = [
         "project": "app-rag",
         "name": "revoked",
         "disabled": True,
+    },
+    {
+        "token": "mi-fiscalia-local",
+        "project": "plan-investigacion",
+        "name": "mi-fiscalia-local",
+    },
+    {
+        "token": "mi-fiscalia-test",
+        "project": "plan-investigacion",
+        "name": "mi-fiscalia-test",
+    },
+    {
+        "token": "mi-fiscalia-devel",
+        "project": "plan-investigacion",
+        "name": "mi-fiscalia-devel",
+    },
+    {
+        "token": "mi-fiscalia-staging",
+        "project": "plan-investigacion",
+        "name": "mi-fiscalia-staging",
+    },
+    {
+        "token": "mi-fiscalia-production",
+        "project": "plan-investigacion",
+        "name": "mi-fiscalia-production",
     },
 ]
 
@@ -333,7 +366,10 @@ def resolve_auth(auth_header: str | None) -> tuple[AuthInfo | None, str | None]:
 
 def is_blocked(info: AuthInfo | None, raw_token: str | None) -> bool:
     if info is None:
-        return True
+        if raw_token is None:
+            return True
+        # Unknown key: pass as anomaly/anomaly only when explicitly allowed.
+        return not ALLOW_UNKNOWN_KEYS
     if info.disabled:
         return True
     if raw_token is None:
@@ -418,6 +454,20 @@ def _gateway_proxy(
     info, raw_token = resolve_auth(auth)
 
     if STRICT_AUTH and is_blocked(info, raw_token):
+        blocked_client = (
+            f"hash-{token_hash_prefix(raw_token)}"
+            if raw_token
+            else ANONYMOUS_CLIENT
+        )
+        blocked_model_obj: object = (body or {}).get("model", "unknown")
+        REQUESTS.labels(
+            blocked_client,
+            UNKNOWN_PROJECT,
+            ANONYMOUS_NAME,
+            str(blocked_model_obj),
+            endpoint,
+            "blocked",
+        ).inc()
         return JSONResponse(
             status_code=401,
             content={"error": "missing or unknown Bearer token"},

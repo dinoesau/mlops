@@ -32,6 +32,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=grpc://jaeger:4317
       - VLLM_BASE_URL=http://host.docker.internal:8000
       - STRICT_AUTH=true
+      - ALLOW_UNKNOWN_KEYS=false  # true = unknown keys pass as anomaly/anomaly
       # DEFAULT_KEYS in gateway.py is the source of truth (app-rag/production,
       # app-rag/staging, app-etl/production, free/client-a, disabled).
       # TOKEN_MAP and API_KEYS_JSON are optional overrides only.

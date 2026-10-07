@@ -31,11 +31,11 @@ def test_normalize_free() -> None:
     assert normalize_project("app-rag") == "app-rag"
 
 
-def test_parse_defaults_has_five_entries() -> None:
+def test_parse_defaults_has_ten_entries() -> None:
     result = parse_keys(gw.DEFAULT_KEYS, "", "")
     assert isinstance(result, Ok)
     registry = result.value
-    assert len(registry) == 5
+    assert len(registry) == 10
     assert registry["poc-app-rag-prod-001"].client_id == "app-rag/production"
     assert registry["poc-app-rag-stag-002"].client_id == "app-rag/staging"
     assert registry["poc-app-etl-prod-003"].client_id == "app-etl/production"
@@ -43,6 +43,15 @@ def test_parse_defaults_has_five_entries() -> None:
     assert registry["poc-free-client-a-004"].client_id == "free/client-a"
     assert registry["poc-free-client-a-004"].project == "free"
     assert registry["poc-disabled-005"].disabled is True
+    # plan-investigacion keys.
+    assert (
+        registry["mi-fiscalia-local"].client_id
+        == "plan-investigacion/mi-fiscalia-local"
+    )
+    assert (
+        registry["mi-fiscalia-production"].client_id
+        == "plan-investigacion/mi-fiscalia-production"
+    )
 
 
 def test_parse_rejects_duplicate_token() -> None:
@@ -186,6 +195,7 @@ def test_health_lists_projects_without_secrets() -> None:
     assert data["status"] == "ok"
     assert "app-rag" in data["projects"]
     assert "free" in data["projects"]
+    assert "plan-investigacion" in data["projects"]
     body = r.text
     for secret in (
         "poc-app-rag-prod-001",
@@ -193,6 +203,11 @@ def test_health_lists_projects_without_secrets() -> None:
         "poc-app-etl-prod-003",
         "poc-free-client-a-004",
         "poc-disabled-005",
+        "mi-fiscalia-local",
+        "mi-fiscalia-test",
+        "mi-fiscalia-devel",
+        "mi-fiscalia-staging",
+        "mi-fiscalia-production",
     ):
         assert secret not in body
 
@@ -201,3 +216,66 @@ def test_models_401_for_unknown() -> None:
     c = _client()
     r = c.get("/v1/models", headers={"Authorization": "Bearer unknown-xyz"})
     assert r.status_code == 401
+
+
+def test_blocked_unknown_recorded_as_anomaly() -> None:
+    c = _client()
+    labels = (
+        "hash-" + token_hash_prefix("intruder-001"),
+        "anomaly",
+        "anomaly",
+        "m",
+        "/v1/chat/completions",
+        "blocked",
+    )
+    before = gw.REQUESTS.labels(*labels)._value.get()
+    r = c.post(
+        "/v1/chat/completions",
+        json={"model": "m", "messages": []},
+        headers={"Authorization": "Bearer intruder-001"},
+    )
+    assert r.status_code == 401
+    assert gw.REQUESTS.labels(*labels)._value.get() == before + 1
+
+
+def test_unknown_labels_fall_back_to_anomaly() -> None:
+    assert gw.UNKNOWN_PROJECT == "anomaly"
+    assert gw.ANONYMOUS_NAME == "anomaly"
+
+
+def test_allow_unknown_keys_flag_passes_as_anomaly(monkeypatch: object) -> None:
+    monkeypatch.setattr(gw, "ALLOW_UNKNOWN_KEYS", True)
+
+    usage = {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}
+
+    class _FakeResp:
+        ok = True
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        content = b'{"usage": {"prompt_tokens": 1}}'
+
+        def json(self) -> dict[str, object]:
+            return {"usage": dict(usage)}
+
+    def _ok(
+        method: str, path: str, body: dict[str, object] | None, headers: dict[str, str]
+    ) -> object:
+        return _FakeResp()
+
+    monkeypatch.setattr(gw, "_forward", _ok)  # type: ignore[attr-defined]
+    labels = (
+        "hash-" + token_hash_prefix("intruder-002"),
+        "anomaly",
+        "anomaly",
+        "m",
+        "/v1/chat/completions",
+        "ok",
+    )
+    before = gw.REQUESTS.labels(*labels)._value.get()
+    r = _client().post(
+        "/v1/chat/completions",
+        json={"model": "m", "messages": []},
+        headers={"Authorization": "Bearer intruder-002"},
+    )
+    assert r.status_code == 200
+    assert gw.REQUESTS.labels(*labels)._value.get() == before + 1
