@@ -27,7 +27,7 @@
   "graphTooltip": 0,
   "id": 1,
   "links": [],
-  "liveNow": false,
+  "liveNow": true,
   "panels": [
     {
       "datasource": {
@@ -1491,7 +1491,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "",
+  "refresh": "5s",
   "schemaVersion": 39,
   "tags": [],
   "templating": {

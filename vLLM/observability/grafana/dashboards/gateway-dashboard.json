@@ -28,6 +28,8 @@
     "gateway"
   ],
   "timezone": "",
+  "liveNow": true,
+  "refresh": "5s",
   "templating": {
     "list": [
       {

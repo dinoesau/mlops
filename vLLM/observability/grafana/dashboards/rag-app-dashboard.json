@@ -21,6 +21,8 @@
   "style": "dark",
   "tags": ["rag", "metrics"],
   "timezone": "",
+  "liveNow": true,
+  "refresh": "5s",
   "time": { "from": "now-1h", "to": "now" },
   "panels": [
     {
